@@ -1393,16 +1393,31 @@ function showSync(){
 }
 
 function startFirebaseSync(){
+  // On first load, always take Firebase data if it has athletes
+  let firstLoad = true;
   db.ref('torneo').on('value', snapshot => {
     const data = snapshot.val();
-    if(!data) return;
-    const localTs = parseInt(localStorage.getItem(SK+'_ts')||'0');
-    if(data.updatedAt && data.updatedAt <= localTs) return;
-    athletes = data.athletes || athletes;
-    nextId = data.nextId || nextId;
-    gironiState = data.gironiState || gironiState;
-    matchResults = data.matchResults || {};
-    bracketState = data.bracketState || {};
+    if(!data || !data.athletes || data.athletes.length === 0) return;
+    
+    if(firstLoad){
+      // Always load from Firebase on first connection
+      firstLoad = false;
+      athletes = data.athletes;
+      nextId = data.nextId || nextId;
+      gironiState = data.gironiState || gironiState;
+      matchResults = data.matchResults || {};
+      bracketState = data.bracketState || {};
+    } else {
+      // Subsequent updates: only apply if newer
+      const localTs = parseInt(localStorage.getItem(SK+'_ts')||'0');
+      if(data.updatedAt && data.updatedAt <= localTs) return;
+      athletes = data.athletes;
+      nextId = data.nextId || nextId;
+      gironiState = data.gironiState || gironiState;
+      matchResults = data.matchResults || {};
+      bracketState = data.bracketState || {};
+    }
+    
     try{ localStorage.setItem(SK+'_ts', data.updatedAt||Date.now()); }catch(e){}
     renderA();
     renderG();
